@@ -282,9 +282,11 @@ function collapseColumnsTracked(trackGrid){
 }
 // A group is "new" if its cells came from 2+ DIFFERENT pre-gravity groups (gravity merged them)
 function isNewGroup(group,trackGrid){
-  const origins=new Set();
-  for(const[r,c]of group){const o=trackGrid[r][c];if(o>=0)origins.add(o)}
-  return origins.size>1;
+  // trackGrid stores each cell's ORIGINAL COLUMN before gravity
+  // A group is "new" if its cells came from 2+ different original columns
+  const origCols=new Set();
+  for(const[r,c]of group){const o=trackGrid[r][c];if(o>=0)origCols.add(o)}
+  return origCols.size>1;
 }
 
 // ===================== TURN PROCESSING =====================
@@ -298,10 +300,9 @@ async function processTurn(r,c){
   let turnScore=0;
   let cascadeLevel=1;
 
-  // Snapshot ALL pre-existing groups ≥ CASCADE_MIN_GROUP BEFORE removing clicked group
-  const preGroups=findAllGroups(CASCADE_MIN_GROUP);
+  // Snapshot each cell's ORIGINAL COLUMN before any changes
   const trackGrid=Array.from({length:G.rows},()=>Array(G.effectiveCols).fill(-1));
-  preGroups.forEach((g,idx)=>{g.forEach(([gr,gc])=>trackGrid[gr][gc]=idx)});
+  for(let rr=0;rr<G.rows;rr++)for(let cc=0;cc<G.effectiveCols;cc++)if(G.grid[rr][cc])trackGrid[rr][cc]=cc;
 
   // Pop the clicked group
   popCells(group);
@@ -471,10 +472,9 @@ function simulateTurn(r,c){
   const group=findGroup(r,c);
   if(group.length<MIN_GROUP){restoreGrid(saved);return 0}
 
-  // Snapshot pre-existing groups
-  const preGroups=findAllGroups(CASCADE_MIN_GROUP);
+  // Snapshot each cell's original column
   const trackGrid=Array.from({length:G.rows},()=>Array(G.effectiveCols).fill(-1));
-  preGroups.forEach((g,idx)=>{g.forEach(([gr,gc])=>trackGrid[gr][gc]=idx)});
+  for(let rr=0;rr<G.rows;rr++)for(let cc=0;cc<G.effectiveCols;cc++)if(G.grid[rr][cc])trackGrid[rr][cc]=cc;
 
   group.forEach(([gr,gc])=>{G.grid[gr][gc]=0;trackGrid[gr][gc]=-1});
   let score=(group.length-MIN_GROUP+1)**2;
@@ -498,10 +498,9 @@ function applySimTurn(r,c){
   const group=findGroup(r,c);
   if(group.length<MIN_GROUP)return;
 
-  // Snapshot pre-existing groups
-  const preGroups=findAllGroups(CASCADE_MIN_GROUP);
+  // Snapshot each cell's original column
   const trackGrid=Array.from({length:G.rows},()=>Array(G.effectiveCols).fill(-1));
-  preGroups.forEach((g,idx)=>{g.forEach(([gr,gc])=>trackGrid[gr][gc]=idx)});
+  for(let rr=0;rr<G.rows;rr++)for(let cc=0;cc<G.effectiveCols;cc++)if(G.grid[rr][cc])trackGrid[rr][cc]=cc;
 
   group.forEach(([gr,gc])=>{G.grid[gr][gc]=0;trackGrid[gr][gc]=-1});
   let casc=true;
