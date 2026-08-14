@@ -276,22 +276,38 @@ async function processTurn(r,c){
   turnScore+=base*cascadeLevel;
   showScorePop(r,c,base,cascadeLevel);
 
-  // Cascade loop
+  // Cascade loop — only cascade NEWLY FORMED groups from gravity
   let cascading=true;
   while(cascading){
+    // Snapshot occupied cells BEFORE gravity
+    const preOccupied=new Set();
+    for(let rr=0;rr<G.rows;rr++)for(let cc=0;cc<G.effectiveCols;cc++)if(G.grid[rr][cc])preOccupied.add(rr*100+cc);
+
     applyGravity();
     collapseColumns();
     renderBoard();
     await sleep(200);
 
+    // Find cells that MOVED (were empty before gravity, now occupied)
+    const movedCells=new Set();
+    for(let rr=0;rr<G.rows;rr++)for(let cc=0;cc<G.effectiveCols;cc++){
+      if(G.grid[rr][cc]&&!preOccupied.has(rr*100+cc))movedCells.add(rr*100+cc);
+    }
+
+    // Also: cells that were occupied but are now at a DIFFERENT position count as moved
+    // (gravity moved them down, collapse moved them left)
+    // We detect this by: a cell is "new" if its current position wasn't occupied before
+
+    // Find all groups, but only cascade those with at least one moved cell
     const allGroups=findAllGroups(CASCADE_MIN_GROUP);
-    if(allGroups.length===0){cascading=false;break}
+    const cascadeGroups=allGroups.filter(g=>g.some(([gr,gc])=>movedCells.has(gr*100+gc)));
+    if(cascadeGroups.length===0){cascading=false;break}
 
     cascadeLevel++;
     showCascadeLabel(cascadeLevel);
 
     let cascadeScore=0;
-    for(const g of allGroups){
+    for(const g of cascadeGroups){
       popCells(g);
       await sleep(200);
       g.forEach(([gr,gc])=>G.grid[gr][gc]=0);
@@ -439,8 +455,12 @@ function simulateTurn(r,c){
   let level=1;
   let casc=true;
   while(casc){
+    const pre=new Set();
+    for(let rr=0;rr<G.rows;rr++)for(let cc=0;cc<G.effectiveCols;cc++)if(G.grid[rr][cc])pre.add(rr*100+cc);
     applyGravity();collapseColumns();
-    const ag=findAllGroups(CASCADE_MIN_GROUP);
+    const moved=new Set();
+    for(let rr=0;rr<G.rows;rr++)for(let cc=0;cc<G.effectiveCols;cc++)if(G.grid[rr][cc]&&!pre.has(rr*100+cc))moved.add(rr*100+cc);
+    const ag=findAllGroups(CASCADE_MIN_GROUP).filter(g=>g.some(([gr,gc])=>moved.has(gr*100+gc)));
     if(!ag.length){casc=false;break}
     level++;
     for(const g of ag){
@@ -458,8 +478,12 @@ function applySimTurn(r,c){
   group.forEach(([gr,gc])=>G.grid[gr][gc]=0);
   let casc=true;
   while(casc){
+    const pre=new Set();
+    for(let rr=0;rr<G.rows;rr++)for(let cc=0;cc<G.effectiveCols;cc++)if(G.grid[rr][cc])pre.add(rr*100+cc);
     applyGravity();collapseColumns();
-    const ag=findAllGroups(CASCADE_MIN_GROUP);
+    const moved=new Set();
+    for(let rr=0;rr<G.rows;rr++)for(let cc=0;cc<G.effectiveCols;cc++)if(G.grid[rr][cc]&&!pre.has(rr*100+cc))moved.add(rr*100+cc);
+    const ag=findAllGroups(CASCADE_MIN_GROUP).filter(g=>g.some(([gr,gc])=>moved.has(gr*100+gc)));
     if(!ag.length){casc=false;break}
     for(const g of ag)g.forEach(([gr,gc])=>G.grid[gr][gc]=0);
   }
