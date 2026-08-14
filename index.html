@@ -257,6 +257,36 @@ function collapseColumns(){
   G.effectiveCols=active.length;
 }
 
+// ===================== TRACKED GRAVITY HELPERS =====================
+// Apply gravity while tracking where each cell came from (group origin tracking)
+function applyGravityTracked(trackGrid){
+  for(let c=0;c<G.effectiveCols;c++){
+    const tiles=[];const tracks=[];
+    for(let r=G.rows-1;r>=0;r--){if(G.grid[r][c]){tiles.push(G.grid[r][c]);tracks.push(trackGrid[r][c])}}
+    for(let r=0;r<G.rows;r++){G.grid[r][c]=0;trackGrid[r][c]=-1}
+    for(let i=0;i<tiles.length;i++){G.grid[G.rows-1-i][c]=tiles[i];trackGrid[G.rows-1-i][c]=tracks[i]}
+  }
+}
+function collapseColumnsTracked(trackGrid){
+  const active=[];
+  for(let c=0;c<G.effectiveCols;c++){let empty=true;for(let r=0;r<G.rows;r++){if(G.grid[r][c]){empty=false;break}};if(!empty)active.push(c)}
+  const newGrid=[];const newTrack=[];
+  for(let r=0;r<G.rows;r++){
+    newGrid[r]=[];newTrack[r]=[];
+    for(let nc=0;nc<active.length;nc++){newGrid[r][nc]=G.grid[r][active[nc]];newTrack[r][nc]=trackGrid[r][active[nc]]}
+    for(let nc=active.length;nc<G.effectiveCols;nc++){newGrid[r][nc]=0;newTrack[r][nc]=-1}
+  }
+  G.grid=newGrid;
+  for(let r=0;r<G.rows;r++)for(let c=0;c<G.effectiveCols;c++)trackGrid[r][c]=newTrack[r][c];
+  G.effectiveCols=active.length;
+}
+// A group is "new" if its cells came from 2+ DIFFERENT pre-gravity groups (gravity merged them)
+function isNewGroup(group,trackGrid){
+  const origins=new Set();
+  for(const[r,c]of group){const o=trackGrid[r][c];if(o>=0)origins.add(o)}
+  return origins.size>1;
+}
+
 // ===================== TURN PROCESSING =====================
 async function processTurn(r,c){
   if(G.animating)return;
@@ -268,39 +298,29 @@ async function processTurn(r,c){
   let turnScore=0;
   let cascadeLevel=1;
 
+  // Snapshot ALL pre-existing groups ≥ CASCADE_MIN_GROUP BEFORE removing clicked group
+  const preGroups=findAllGroups(CASCADE_MIN_GROUP);
+  const trackGrid=Array.from({length:G.rows},()=>Array(G.effectiveCols).fill(-1));
+  preGroups.forEach((g,idx)=>{g.forEach(([gr,gc])=>trackGrid[gr][gc]=idx)});
+
   // Pop the clicked group
   popCells(group);
   await sleep(250);
-  group.forEach(([gr,gc])=>G.grid[gr][gc]=0);
+  group.forEach(([gr,gc])=>{G.grid[gr][gc]=0;trackGrid[gr][gc]=-1});
   const base=(group.length-MIN_GROUP+1)**2;
   turnScore+=base*cascadeLevel;
   showScorePop(r,c,base,cascadeLevel);
 
-  // Cascade loop — only cascade NEWLY FORMED groups from gravity
+  // Cascade loop — only cascade GENUINELY NEW groups formed by gravity merging different groups
   let cascading=true;
   while(cascading){
-    // Snapshot occupied cells BEFORE gravity
-    const preOccupied=new Set();
-    for(let rr=0;rr<G.rows;rr++)for(let cc=0;cc<G.effectiveCols;cc++)if(G.grid[rr][cc])preOccupied.add(rr*100+cc);
-
-    applyGravity();
-    collapseColumns();
+    applyGravityTracked(trackGrid);
+    collapseColumnsTracked(trackGrid);
     renderBoard();
     await sleep(200);
 
-    // Find cells that MOVED (were empty before gravity, now occupied)
-    const movedCells=new Set();
-    for(let rr=0;rr<G.rows;rr++)for(let cc=0;cc<G.effectiveCols;cc++){
-      if(G.grid[rr][cc]&&!preOccupied.has(rr*100+cc))movedCells.add(rr*100+cc);
-    }
-
-    // Also: cells that were occupied but are now at a DIFFERENT position count as moved
-    // (gravity moved them down, collapse moved them left)
-    // We detect this by: a cell is "new" if its current position wasn't occupied before
-
-    // Find all groups, but only cascade those with at least one moved cell
     const allGroups=findAllGroups(CASCADE_MIN_GROUP);
-    const cascadeGroups=allGroups.filter(g=>g.some(([gr,gc])=>movedCells.has(gr*100+gc)));
+    const cascadeGroups=allGroups.filter(g=>isNewGroup(g,trackGrid));
     if(cascadeGroups.length===0){cascading=false;break}
 
     cascadeLevel++;
@@ -310,7 +330,7 @@ async function processTurn(r,c){
     for(const g of cascadeGroups){
       popCells(g);
       await sleep(200);
-      g.forEach(([gr,gc])=>G.grid[gr][gc]=0);
+      g.forEach(([gr,gc])=>{G.grid[gr][gc]=0;trackGrid[gr][gc]=-1});
       const bs=(g.length-MIN_GROUP+1)**2;
       cascadeScore+=bs*cascadeLevel;
     }
@@ -450,21 +470,23 @@ function simulateTurn(r,c){
   const saved=saveGrid();
   const group=findGroup(r,c);
   if(group.length<MIN_GROUP){restoreGrid(saved);return 0}
-  group.forEach(([gr,gc])=>G.grid[gr][gc]=0);
+
+  // Snapshot pre-existing groups
+  const preGroups=findAllGroups(CASCADE_MIN_GROUP);
+  const trackGrid=Array.from({length:G.rows},()=>Array(G.effectiveCols).fill(-1));
+  preGroups.forEach((g,idx)=>{g.forEach(([gr,gc])=>trackGrid[gr][gc]=idx)});
+
+  group.forEach(([gr,gc])=>{G.grid[gr][gc]=0;trackGrid[gr][gc]=-1});
   let score=(group.length-MIN_GROUP+1)**2;
   let level=1;
   let casc=true;
   while(casc){
-    const pre=new Set();
-    for(let rr=0;rr<G.rows;rr++)for(let cc=0;cc<G.effectiveCols;cc++)if(G.grid[rr][cc])pre.add(rr*100+cc);
-    applyGravity();collapseColumns();
-    const moved=new Set();
-    for(let rr=0;rr<G.rows;rr++)for(let cc=0;cc<G.effectiveCols;cc++)if(G.grid[rr][cc]&&!pre.has(rr*100+cc))moved.add(rr*100+cc);
-    const ag=findAllGroups(CASCADE_MIN_GROUP).filter(g=>g.some(([gr,gc])=>moved.has(gr*100+gc)));
+    applyGravityTracked(trackGrid);collapseColumnsTracked(trackGrid);
+    const ag=findAllGroups(CASCADE_MIN_GROUP).filter(g=>isNewGroup(g,trackGrid));
     if(!ag.length){casc=false;break}
     level++;
     for(const g of ag){
-      g.forEach(([gr,gc])=>G.grid[gr][gc]=0);
+      g.forEach(([gr,gc])=>{G.grid[gr][gc]=0;trackGrid[gr][gc]=-1});
       score+=(g.length-MIN_GROUP+1)**2*level;
     }
   }
@@ -475,17 +497,19 @@ function simulateTurn(r,c){
 function applySimTurn(r,c){
   const group=findGroup(r,c);
   if(group.length<MIN_GROUP)return;
-  group.forEach(([gr,gc])=>G.grid[gr][gc]=0);
+
+  // Snapshot pre-existing groups
+  const preGroups=findAllGroups(CASCADE_MIN_GROUP);
+  const trackGrid=Array.from({length:G.rows},()=>Array(G.effectiveCols).fill(-1));
+  preGroups.forEach((g,idx)=>{g.forEach(([gr,gc])=>trackGrid[gr][gc]=idx)});
+
+  group.forEach(([gr,gc])=>{G.grid[gr][gc]=0;trackGrid[gr][gc]=-1});
   let casc=true;
   while(casc){
-    const pre=new Set();
-    for(let rr=0;rr<G.rows;rr++)for(let cc=0;cc<G.effectiveCols;cc++)if(G.grid[rr][cc])pre.add(rr*100+cc);
-    applyGravity();collapseColumns();
-    const moved=new Set();
-    for(let rr=0;rr<G.rows;rr++)for(let cc=0;cc<G.effectiveCols;cc++)if(G.grid[rr][cc]&&!pre.has(rr*100+cc))moved.add(rr*100+cc);
-    const ag=findAllGroups(CASCADE_MIN_GROUP).filter(g=>g.some(([gr,gc])=>moved.has(gr*100+gc)));
+    applyGravityTracked(trackGrid);collapseColumnsTracked(trackGrid);
+    const ag=findAllGroups(CASCADE_MIN_GROUP).filter(g=>isNewGroup(g,trackGrid));
     if(!ag.length){casc=false;break}
-    for(const g of ag)g.forEach(([gr,gc])=>G.grid[gr][gc]=0);
+    for(const g of ag)g.forEach(([gr,gc])=>{G.grid[gr][gc]=0;trackGrid[gr][gc]=-1});
   }
 }
 
