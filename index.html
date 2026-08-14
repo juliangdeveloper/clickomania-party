@@ -150,6 +150,7 @@ const PALETTE=['#e74c3c','#3498db','#2ecc71','#f1c40f','#9b59b6'];
 const COLOR_NAMES=['Rojo','Azul','Verde','Amarillo','Morado'];
 const PCOL=['#2dd4bf','#f97316','#ec4899','#84cc16'];
 const MIN_GROUP=2;
+const CASCADE_MIN_GROUP=4;
 const BOARD_CLEAR_BONUS=100;
 
 let G={grid:[],rows:12,cols:15,players:[],curP:0,round:0,maxRounds:3,animating:false,over:false,effectiveCols:15};
@@ -213,7 +214,8 @@ function findGroup(r,c){
   return group;
 }
 
-function findAllGroups(){
+function findAllGroups(minSize){
+  const ms=minSize||MIN_GROUP;
   const visited=new Set();
   const groups=[];
   for(let r=0;r<G.rows;r++){
@@ -223,7 +225,7 @@ function findAllGroups(){
       if(visited.has(key))continue;
       const g=findGroup(r,c);
       g.forEach(([gr,gc])=>visited.add(gr*100+gc));
-      if(g.length>=MIN_GROUP)groups.push(g);
+      if(g.length>=ms)groups.push(g);
     }
   }
   return groups;
@@ -282,7 +284,7 @@ async function processTurn(r,c){
     renderBoard();
     await sleep(200);
 
-    const allGroups=findAllGroups();
+    const allGroups=findAllGroups(CASCADE_MIN_GROUP);
     if(allGroups.length===0){cascading=false;break}
 
     cascadeLevel++;
@@ -438,7 +440,7 @@ function simulateTurn(r,c){
   let casc=true;
   while(casc){
     applyGravity();collapseColumns();
-    const ag=findAllGroups();
+    const ag=findAllGroups(CASCADE_MIN_GROUP);
     if(!ag.length){casc=false;break}
     level++;
     for(const g of ag){
@@ -457,7 +459,7 @@ function applySimTurn(r,c){
   let casc=true;
   while(casc){
     applyGravity();collapseColumns();
-    const ag=findAllGroups();
+    const ag=findAllGroups(CASCADE_MIN_GROUP);
     if(!ag.length){casc=false;break}
     for(const g of ag)g.forEach(([gr,gc])=>G.grid[gr][gc]=0);
   }
