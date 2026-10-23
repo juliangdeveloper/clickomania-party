@@ -6,7 +6,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var APP_VERSION = '1.0.4';
+  var APP_VERSION = '1.0.5';
   var SLUG = 'clickomania-party';
   var SAVE_KEY = 'clickomania-party.save';
 
