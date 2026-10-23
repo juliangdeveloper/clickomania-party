@@ -1,4 +1,3 @@
-// Shared progress record meta.v1.
 (function (root, factory) {
   var api = factory();
   if (typeof module === 'object' && module.exports) module.exports = api;
@@ -12,9 +11,6 @@
   var timer = null;
   var STAT_CAP = 20;
 
-  // Project status, set by hand and bumped with the version. Never computed from play.
-  // fase 1-6: Idea, Definición, Diseño, Construcción, Validación, Lanzamiento y mantenimiento.
-  // fase_estado 0-4: pendiente, en curso, bloqueada, en revisión, completada.
   var PROYECTO = {
     objetivo: 'Juego de fiesta por turnos de cascadas de colores para 2 a 4 jugadores, humanos o IA, en el navegador.',
     fase: 6,
@@ -28,7 +24,6 @@
     return typeof n === 'number' && Number.isInteger(n) && n >= lo && n <= hi;
   }
 
-  // Clean copy of a proyecto block, or null when any field is missing or out of range.
   function metaProyecto(p) {
     try {
       if (!p || typeof p !== 'object' || Array.isArray(p)) return null;
@@ -41,12 +36,10 @@
     }
   }
 
-  // Tests only: swap the block the writer uses (null restores PROYECTO).
   function metaSetProyecto(p) {
     proyectoSource = p === null ? PROYECTO : p;
   }
 
-  // Adds the current proyecto block to a record being written, when it is valid.
   function withProyecto(record) {
     var p = metaProyecto(proyectoSource);
     if (p) record.proyecto = p;

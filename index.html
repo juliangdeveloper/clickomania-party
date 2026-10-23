@@ -31,13 +31,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .pcb label:has(input:checked){border-color:var(--accent);background:rgba(233,69,96,.15)}
 .pcb input{display:none}
 
-/* GAME */
 #game{padding:8px;width:100%}
 .g-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;padding:0 4px;margin-bottom:6px}
 .round-badge{background:var(--panel2);padding:6px 14px;border-radius:12px;font-weight:700;font-size:1em}
 .turn-badge{padding:6px 16px;border-radius:10px;font-weight:700;font-size:1em;transition:all .3s}
 
-/* BOARD */
 .board-wrap{display:flex;justify-content:center;margin:8px 0;overflow-x:auto}
 .board{display:grid;gap:1px;background:var(--cell-border);border-radius:8px;padding:2px;touch-action:manipulation}
 .cell{width:32px;height:32px;border-radius:4px;cursor:pointer;transition:all .15s;position:relative;display:flex;align-items:center;justify-content:center}
@@ -50,20 +48,17 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .cell.cascade-pop{animation:cascadePop .3s ease-out}
 @keyframes cascadePop{0%{filter:brightness(1)}50%{filter:brightness(2)}100%{filter:brightness(1)}}
 
-/* PLAYERS */
 .player-bar{display:flex;gap:8px;justify-content:center;margin:6px 0;flex-wrap:wrap}
 .pb{padding:6px 14px;border-radius:10px;font-weight:700;font-size:.85em;border:2px solid transparent;transition:all .3s;opacity:.5}
 .pb.current{opacity:1;transform:scale(1.1);box-shadow:0 0 12px rgba(255,255,255,.15)}
 .pb .pb-score{margin-left:6px;font-size:.95em}
 
-/* SCORE POP */
 .score-pop{position:fixed;pointer-events:none;font-size:1.5em;font-weight:900;z-index:100;text-shadow:0 2px 8px rgba(0,0,0,.8);animation:popUp .8s ease-out forwards}
 @keyframes popUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-50px) scale(1.4)}}
 .cascade-label{position:fixed;pointer-events:none;font-size:1.2em;font-weight:700;z-index:100;color:#f1c40f;text-shadow:0 2px 8px rgba(0,0,0,.8);animation:popUp .6s ease-out forwards}
 
 .msg{background:rgba(233,69,96,.12);border:1px solid var(--accent);border-radius:10px;padding:8px 16px;text-align:center;font-weight:600;font-size:.9em;margin-top:8px;max-width:700px;width:100%}
 
-/* OVERLAYS */
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;padding:20px}
 .overlay.show{display:flex}
 .overlay-card{background:var(--panel);border-radius:20px;padding:24px;max-width:500px;width:100%;text-align:center;border:2px solid var(--accent);max-height:85vh;overflow-y:auto}
@@ -72,11 +67,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .overlay-card .paper-box{background:var(--panel2);border-radius:12px;padding:14px;margin:10px 0;text-align:left;font-size:.85em;line-height:1.6;border-left:3px solid var(--accent)}
 .overlay-card .theorem{background:rgba(233,69,96,.1);border-left:3px solid var(--accent);padding:10px;margin:8px 0;font-size:.85em;border-radius:0 8px 8px 0;font-style:italic}
 
-/* SETTINGS */
 .overlay-card .setting-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:.85em}
 .overlay-card select,.overlay-card input[type=number]{padding:4px 8px;border-radius:6px;border:1px solid #333;background:#0d1b2a;color:#fff;font-size:.85em;width:80px}
 
-/* END */
 #end{text-align:center;padding-top:20px}
 #end h1{font-size:2.2em;margin-bottom:8px;background:linear-gradient(135deg,#e74c3c,#3498db,#2ecc71);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .end-rank{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--panel);border-radius:12px;margin:5px 0;max-width:450px}
@@ -145,8 +138,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <div class="overlay" id="rulesOv"><div class="overlay-card" id="rulesCard"></div></div>
 <div class="overlay" id="aboutOv"><div class="overlay-card" id="aboutCard"></div></div>
 
-<script src="meta.js?v=1.0.3"></script>
-<script src="progress.js?v=1.0.3"></script>
+<script src="meta.js?v=1.0.4"></script>
+<script src="progress.js?v=1.0.4"></script>
 <script>
 const PALETTE=['#e74c3c','#3498db','#2ecc71','#f1c40f','#9b59b6'];
 const PCOL=['#2dd4bf','#f97316','#ec4899','#84cc16'];
@@ -156,14 +149,12 @@ const BOARD_CLEAR_BONUS=100;
 
 let G={grid:[],rows:12,cols:15,players:[],curP:0,round:0,maxRounds:3,animating:false,over:false,effectiveCols:15};
 
-// ===================== SETUP =====================
 function setPC(n){document.querySelectorAll('#menu .cbtn').forEach((b,i)=>b.classList.toggle('on',i===n-2));renderPS(n)}
 function renderPS(n){let h='';for(let i=0;i<n;i++)h+=`<div class="pr"><label style="color:${PCOL[i]}">P${i+1}</label><input type="text" id="pn${i}" placeholder="Jugador ${i+1}" maxlength="10"><select id="pt${i}"><option value="human">Humano</option><option value="easy">IA Fácil</option><option value="medium">IA Media</option><option value="hard">IA Difícil</option></select></div>`;document.getElementById('pSetup').innerHTML=h}
 function getPC(){const a=document.querySelector('#menu .cbtn.on');return a?parseInt(a.textContent):2}
 function getDur(){return parseInt(document.querySelector('input[name=rnd]:checked')?.value||3)}
 function getBoardSize(){const v=document.querySelector('input[name=bsz]:checked')?.value||'med';return v==='small'?{c:10,r:8}:v==='big'?{c:18,r:14}:{c:15,r:12}}
 
-// ===================== START =====================
 function startG(){
   const n=getPC();const bs=getBoardSize();
   G.cols=bs.c;G.rows=bs.r;G.maxRounds=getDur();G.round=0;G.over=false;G.animating=false;
@@ -196,7 +187,6 @@ function generateBoard(){
   }
 }
 
-// ===================== CORE MECHANICS =====================
 function findGroup(r,c){
   const color=G.grid[r][c];
   if(!color)return[];
@@ -259,8 +249,6 @@ function collapseColumns(){
   G.effectiveCols=active.length;
 }
 
-// ===================== TRACKED GRAVITY HELPERS =====================
-// Apply gravity while tracking where each cell came from (group origin tracking)
 function applyGravityTracked(trackGrid){
   for(let c=0;c<G.effectiveCols;c++){
     const tiles=[];const tracks=[];
@@ -282,16 +270,12 @@ function collapseColumnsTracked(trackGrid){
   for(let r=0;r<G.rows;r++)for(let c=0;c<G.effectiveCols;c++)trackGrid[r][c]=newTrack[r][c];
   G.effectiveCols=active.length;
 }
-// A group is "new" if its cells came from 2+ DIFFERENT pre-gravity groups (gravity merged them)
 function isNewGroup(group,trackGrid){
-  // trackGrid stores each cell's ORIGINAL COLUMN before gravity
-  // A group is "new" if its cells came from 2+ different original columns
   const origCols=new Set();
   for(const[r,c]of group){const o=trackGrid[r][c];if(o>=0)origCols.add(o)}
   return origCols.size>1;
 }
 
-// ===================== TURN PROCESSING =====================
 async function processTurn(r,c){
   if(G.animating)return;
   G.animating=true;
@@ -305,11 +289,9 @@ async function processTurn(r,c){
   let cascadeGroupCount=0;
   let biggestGroup=group.length;
 
-  // Snapshot each cell's ORIGINAL COLUMN before any changes
   const trackGrid=Array.from({length:G.rows},()=>Array(G.effectiveCols).fill(-1));
   for(let rr=0;rr<G.rows;rr++)for(let cc=0;cc<G.effectiveCols;cc++)if(G.grid[rr][cc])trackGrid[rr][cc]=cc;
 
-  // Pop the clicked group
   popCells(group);
   await sleep(250);
   group.forEach(([gr,gc])=>{G.grid[gr][gc]=0;trackGrid[gr][gc]=-1});
@@ -317,7 +299,6 @@ async function processTurn(r,c){
   turnScore+=base*cascadeLevel;
   showScorePop(r,c,base,cascadeLevel);
 
-  // Cascade loop — only cascade GENUINELY NEW groups formed by gravity merging different groups
   let cascading=true;
   while(cascading){
     applyGravityTracked(trackGrid);
@@ -347,14 +328,12 @@ async function processTurn(r,c){
     await sleep(150);
   }
 
-  // Board clear check
   const isClear=G.effectiveCols===0||G.grid.every(row=>row.every(c=>c===0));
   if(isClear){
     turnScore+=BOARD_CLEAR_BONUS;
     G.players[G.curP].clears++;
   }
 
-  // Apply score
   const p=G.players[G.curP];
   p.score+=turnScore;
   if(turnScore>p.maxTurn)p.maxTurn=turnScore;
@@ -373,7 +352,6 @@ async function processTurn(r,c){
   G.animating=false;
   renderAll();
 
-  // Check if game continues
   const hasMoves=findAllGroups().length>0;
   if(!hasMoves){
     setMsg(`🚫 ¡Sin movimientos! Fin de la ronda ${G.round}`);
@@ -381,7 +359,6 @@ async function processTurn(r,c){
     return;
   }
 
-  // Next player
   G.curP=(G.curP+1)%G.players.length;
   startTurn();
 }
@@ -419,7 +396,6 @@ function showCascadeLabel(level){
   setTimeout(()=>lbl.remove(),600);
 }
 
-// ===================== TURNS =====================
 function startTurn(){
   const p=G.players[G.curP];
   const hasMoves=findAllGroups().length>0;
@@ -433,14 +409,12 @@ function startTurn(){
   if(p.type!=='human')setTimeout(aiTurn,500);
 }
 
-// ===================== AI =====================
 function aiTurn(){
   const p=G.players[G.curP];
   const groups=findAllGroups();
   if(groups.length===0){G.curP=(G.curP+1)%G.players.length;startTurn();return}
 
   if(p.type==='easy'){
-    // Greedy: pick largest group
     groups.sort((a,b)=>b.length-a.length);
     const best=groups[0];
     processTurn(best[0][0],best[0][1]);
@@ -448,7 +422,6 @@ function aiTurn(){
   }
 
   if(p.type==='medium'){
-    // Greedy with cascade simulation
     let bestScore=-1,bestR=0,bestC=0;
     for(const g of groups){
       const sc=simulateTurn(g[0][0],g[0][1]);
@@ -458,7 +431,6 @@ function aiTurn(){
     return;
   }
 
-  // Hard: lookahead-1
   let bestVal=-Infinity,bestR=0,bestC=0;
   const scored=[];
   for(const g of groups){
@@ -468,11 +440,9 @@ function aiTurn(){
   scored.sort((a,b)=>b.score-a.score);
   const top=scored.slice(0,15);
   for(const move of top){
-    // Simulate own move
     const saved=saveGrid();
     const ownScore=simulateTurn(move.r,move.c);
     applySimTurn(move.r,move.c);
-    // Check opponent's best response
     const oppGroups=findAllGroups();
     let bestOpp=0;
     for(const og of oppGroups){
@@ -491,7 +461,6 @@ function simulateTurn(r,c){
   const group=findGroup(r,c);
   if(group.length<MIN_GROUP){restoreGrid(saved);return 0}
 
-  // Snapshot each cell's original column
   const trackGrid=Array.from({length:G.rows},()=>Array(G.effectiveCols).fill(-1));
   for(let rr=0;rr<G.rows;rr++)for(let cc=0;cc<G.effectiveCols;cc++)if(G.grid[rr][cc])trackGrid[rr][cc]=cc;
 
@@ -517,7 +486,6 @@ function applySimTurn(r,c){
   const group=findGroup(r,c);
   if(group.length<MIN_GROUP)return;
 
-  // Snapshot each cell's original column
   const trackGrid=Array.from({length:G.rows},()=>Array(G.effectiveCols).fill(-1));
   for(let rr=0;rr<G.rows;rr++)for(let cc=0;cc<G.effectiveCols;cc++)if(G.grid[rr][cc])trackGrid[rr][cc]=cc;
 
@@ -538,7 +506,6 @@ function restoreGrid(s){
   G.grid=s.grid.map(r=>[...r]);G.effectiveCols=s.eff;
 }
 
-// ===================== RENDER =====================
 function renderAll(){
   renderBoard();
   renderPlayerBar();
@@ -578,7 +545,6 @@ function renderTurnBadge(){
   tb.style.border=`2px solid ${p.color}`;
 }
 
-// ===================== INTERACTION =====================
 let hoverGroup=null;
 function cellHover(r,c){
   if(G.animating||G.over)return;
@@ -614,7 +580,6 @@ function cellClick(r,c){
   processTurn(r,c);
 }
 
-// ===================== END GAME =====================
 function endGame(){
   G.over=true;showS('end');
   const sorted=[...G.players].sort((a,b)=>b.score!==a.score?b.score-a.score:b.clears-a.clears);
@@ -627,7 +592,6 @@ function endGame(){
   document.getElementById('endRank').innerHTML=sorted.map((p,i)=>`<div class="end-rank ${i===0?'w':''}"><span class="er-pos">${medals[i]}</span><span class="er-name" style="color:${p.color}">${p.name}</span><span class="er-score">${p.score} pts</span><div style="font-size:.7em;color:var(--dim)">Clears:${p.clears} Mejor turno:${p.maxTurn}</div></div>`).join('');
 }
 
-// ===================== ABOUT / RULES =====================
 function showAbout(){
   document.getElementById('aboutCard').innerHTML=`
     <h2>📄 El Paper Científico</h2>
@@ -693,7 +657,6 @@ function showRules(){
   document.getElementById('rulesOv').classList.add('show');
 }
 
-// ===================== UI =====================
 function showS(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
 function setMsg(m){document.getElementById('msg').textContent=m}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}

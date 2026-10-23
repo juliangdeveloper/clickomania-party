@@ -1,4 +1,3 @@
-// Cumulative match progress and meta.v1 backfill for clickomania-party.
 (function (root, factory) {
   var api = factory();
   if (typeof module === 'object' && module.exports) module.exports = api;
@@ -7,11 +6,10 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var APP_VERSION = '1.0.3';
+  var APP_VERSION = '1.0.4';
   var SLUG = 'clickomania-party';
   var SAVE_KEY = 'clickomania-party.save';
 
-  // Declared stats. Counts, totals, and bests are monotonic.
   var STATS = [
     { key: 'games_played', monotonic: true },
     { key: 'rounds_played', monotonic: true },
@@ -31,20 +29,19 @@
     { key: 'human_wins', monotonic: true }
   ];
 
-  // Stable ids. Conditions use save stats only.
   var ACHIEVEMENTS = [
-    { id: 'first_game', met: function (s) { return s.games_played >= 1; } }, // finish one match
-    { id: 'first_cascade', met: function (s) { return s.cascade_steps >= 1; } }, // one cascade step
-    { id: 'cascade_x3', met: function (s) { return s.best_cascade >= 3; } }, // cascade multiplier reaches ×3
-    { id: 'cascade_x5', met: function (s) { return s.best_cascade >= 5; } }, // cascade multiplier reaches ×5
-    { id: 'board_clear', met: function (s) { return s.board_clears >= 1; } }, // clear the board once
-    { id: 'big_group', met: function (s) { return s.biggest_group >= 8; } }, // remove a group of 8 or more
-    { id: 'turn_100', met: function (s) { return s.best_turn >= 100; } }, // 100 or more points in one turn
-    { id: 'score_500', met: function (s) { return s.best_score >= 500; } }, // 500 or more points in one match
-    { id: 'score_1000', met: function (s) { return s.best_score >= 1000; } }, // 1000 or more points in one match
-    { id: 'ten_games', met: function (s) { return s.games_played >= 10; } }, // finish ten matches
-    { id: 'five_clears', met: function (s) { return s.board_clears >= 5; } }, // clear the board five times
-    { id: 'human_win', met: function (s) { return s.human_wins >= 1; } } // a human seat finishes first
+    { id: 'first_game', met: function (s) { return s.games_played >= 1; } },
+    { id: 'first_cascade', met: function (s) { return s.cascade_steps >= 1; } },
+    { id: 'cascade_x3', met: function (s) { return s.best_cascade >= 3; } },
+    { id: 'cascade_x5', met: function (s) { return s.best_cascade >= 5; } },
+    { id: 'board_clear', met: function (s) { return s.board_clears >= 1; } },
+    { id: 'big_group', met: function (s) { return s.biggest_group >= 8; } },
+    { id: 'turn_100', met: function (s) { return s.best_turn >= 100; } },
+    { id: 'score_500', met: function (s) { return s.best_score >= 500; } },
+    { id: 'score_1000', met: function (s) { return s.best_score >= 1000; } },
+    { id: 'ten_games', met: function (s) { return s.games_played >= 10; } },
+    { id: 'five_clears', met: function (s) { return s.board_clears >= 5; } },
+    { id: 'human_win', met: function (s) { return s.human_wins >= 1; } }
   ];
 
   var memory = null;
