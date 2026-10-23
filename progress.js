@@ -7,27 +7,28 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var APP_VERSION = '1.0.0';
+  var APP_VERSION = '1.0.1';
   var SLUG = 'clickomania-party';
   var SAVE_KEY = 'clickomania-party.save';
 
-  var STAT_KEYS = [
-    'games_played',
-    'rounds_played',
-    'turns_played',
-    'human_turns',
-    'ai_turns',
-    'groups_popped',
-    'cascade_groups',
-    'tiles_cleared',
-    'cascade_steps',
-    'best_cascade',
-    'board_clears',
-    'biggest_group',
-    'best_turn',
-    'best_score',
-    'total_score',
-    'human_wins'
+  // Declared stats. Counts, totals, and bests are monotonic.
+  var STATS = [
+    { key: 'games_played', monotonic: true },
+    { key: 'rounds_played', monotonic: true },
+    { key: 'turns_played', monotonic: true },
+    { key: 'human_turns', monotonic: true },
+    { key: 'ai_turns', monotonic: true },
+    { key: 'groups_popped', monotonic: true },
+    { key: 'cascade_groups', monotonic: true },
+    { key: 'tiles_cleared', monotonic: true },
+    { key: 'cascade_steps', monotonic: true },
+    { key: 'best_cascade', monotonic: true },
+    { key: 'board_clears', monotonic: true },
+    { key: 'biggest_group', monotonic: true },
+    { key: 'best_turn', monotonic: true },
+    { key: 'best_score', monotonic: true },
+    { key: 'total_score', monotonic: true },
+    { key: 'human_wins', monotonic: true }
   ];
 
   // Stable ids. Conditions use save stats only.
@@ -46,13 +47,23 @@
     { id: 'human_win', met: function (s) { return s.human_wins >= 1; } } // a human seat finishes first
   ];
 
-  var metaTimer = null;
-  var metaLastWrite = 0;
+  var memory = null;
+  var listening = false;
 
-  function emptySave() {
-    var save = {};
-    for (var i = 0; i < STAT_KEYS.length; i++) save[STAT_KEYS[i]] = 0;
-    return save;
+  function isDemoMode() {
+    try {
+      var loc = typeof location !== 'undefined' ? location : globalThis.location;
+      var search = loc && loc.search ? String(loc.search) : '';
+      return /(?:^|[?&])(?:demo|preview)=(?:1|true|yes)(?:&|$)/.test(search);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function emptyStats() {
+    var stats = {};
+    for (var i = 0; i < STATS.length; i++) stats[STATS[i].key] = 0;
+    return stats;
   }
 
   function finite(value, fallback) {
@@ -60,7 +71,7 @@
   }
 
   function loadSave() {
-    var save = emptySave();
+    var save = emptyStats();
     try {
       var raw = globalThis.localStorage.getItem(SAVE_KEY);
       if (raw == null) return save;
@@ -68,42 +79,28 @@
       if (!data || typeof data !== 'object' || Array.isArray(data)) return save;
       var keys = Object.keys(data);
       for (var i = 0; i < keys.length; i++) save[keys[i]] = data[keys[i]];
-      for (var s = 0; s < STAT_KEYS.length; s++) {
-        var statKey = STAT_KEYS[s];
+      for (var s = 0; s < STATS.length; s++) {
+        var statKey = STATS[s].key;
         if (typeof save[statKey] !== 'number' || !Number.isFinite(save[statKey])) save[statKey] = 0;
       }
       return save;
     } catch (e) {
-      return emptySave();
+      return emptyStats();
     }
-  }
-
-  function persistSave(save) {
-    try {
-      var prev = {};
-      try {
-        var raw = globalThis.localStorage.getItem(SAVE_KEY);
-        if (raw != null) {
-          var parsed = JSON.parse(raw);
-          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) prev = parsed;
-        }
-      } catch (e) {
-        prev = {};
-      }
-      var keys = Object.keys(save);
-      for (var i = 0; i < keys.length; i++) prev[keys[i]] = save[keys[i]];
-      globalThis.localStorage.setItem(SAVE_KEY, JSON.stringify(prev));
-    } catch (e) {}
   }
 
   function statsFromSave(save) {
     var stats = {};
-    for (var i = 0; i < STAT_KEYS.length; i++) {
-      var key = STAT_KEYS[i];
+    for (var i = 0; i < STATS.length; i++) {
+      var key = STATS[i].key;
       var value = save ? save[key] : 0;
       stats[key] = typeof value === 'number' && Number.isFinite(value) ? value : 0;
     }
     return stats;
+  }
+
+  function hydrate(stats) {
+    memory = statsFromSave(stats);
   }
 
   function logrosFromStats(stats) {
@@ -116,57 +113,51 @@
     return ids;
   }
 
-  function pushMeta() {
+  function isValidMeta(parsed, slug) {
+    return !!parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.v === 1 && parsed.slug === slug;
+  }
+
+  function scheduleMeta() {
     try {
-      if (typeof globalThis.metaUpdate !== 'function') return null;
-      var save = loadSave();
-      var stats = statsFromSave(save);
-      return globalThis.metaUpdate(SLUG, APP_VERSION, { stats: stats, logros: logrosFromStats(stats) });
+      if (isDemoMode() || !memory || typeof globalThis.metaUpdate !== 'function') return null;
+      return globalThis.metaUpdate(SLUG, APP_VERSION, {
+        stats: memory,
+        logros: logrosFromStats(memory),
+        declared: STATS
+      });
     } catch (e) {
       return null;
     }
   }
 
-  function scheduleMeta() {
-    try {
-      if (metaTimer) return;
-      var elapsed = Date.now() - metaLastWrite;
-      var wait = elapsed >= 1000 ? 0 : 1000 - elapsed;
-      metaTimer = setTimeout(function () {
-        metaTimer = null;
-        metaLastWrite = Date.now();
-        pushMeta();
-      }, wait);
-    } catch (e) {}
-  }
-
-  function flushMeta() {
-    try {
-      if (!metaTimer) return;
-      clearTimeout(metaTimer);
-      metaTimer = null;
-      metaLastWrite = Date.now();
-      pushMeta();
-    } catch (e) {}
-  }
-
-  function clearScheduledMeta() {
-    if (!metaTimer) return;
-    clearTimeout(metaTimer);
-    metaTimer = null;
-  }
-
   function metaBackfill(slug, version) {
     try {
+      if (isDemoMode()) return null;
       var key = 'meta.v1.' + slug;
       var raw = globalThis.localStorage.getItem(key);
       if (raw != null) {
-        JSON.parse(raw);
-        return JSON.parse(raw);
+        var parsed = null;
+        try {
+          parsed = JSON.parse(raw);
+        } catch (e) {
+          parsed = null;
+        }
+        if (isValidMeta(parsed, slug)) {
+          hydrate(parsed.stats);
+          return parsed;
+        }
+        try {
+          globalThis.localStorage.setItem(key + '.corrupt', raw);
+        } catch (e) {}
       }
-      var save = loadSave();
-      var stats = statsFromSave(save);
-      return globalThis.metaUpdate(slug, version, { stats: stats, logros: logrosFromStats(stats) });
+      var stats = statsFromSave(loadSave());
+      hydrate(stats);
+      if (typeof globalThis.metaUpdate !== 'function') return null;
+      return globalThis.metaUpdate(slug, version, {
+        stats: stats,
+        logros: logrosFromStats(stats),
+        declared: STATS
+      });
     } catch (e) {
       return null;
     }
@@ -174,54 +165,69 @@
 
   function recordTurn(turn) {
     try {
-      var save = loadSave();
+      if (isDemoMode()) return;
+      if (!memory) hydrate(loadSave());
       turn = turn || {};
-      save.turns_played += 1;
-      if (turn.human) save.human_turns += 1;
-      else save.ai_turns += 1;
-      save.groups_popped += finite(turn.groups, 1);
-      save.cascade_groups += finite(turn.cascadeGroups, 0);
-      save.tiles_cleared += finite(turn.tiles, 0);
-      save.cascade_steps += finite(turn.cascadeSteps, 0);
+      memory.turns_played += 1;
+      if (turn.human) memory.human_turns += 1;
+      else memory.ai_turns += 1;
+      memory.groups_popped += finite(turn.groups, 1);
+      memory.cascade_groups += finite(turn.cascadeGroups, 0);
+      memory.tiles_cleared += finite(turn.tiles, 0);
+      memory.cascade_steps += finite(turn.cascadeSteps, 0);
       var cascade = finite(turn.cascade, 0);
-      if (cascade > 1 && cascade > save.best_cascade) save.best_cascade = cascade;
-      if (turn.boardClear) save.board_clears += 1;
+      if (cascade > 1 && cascade > memory.best_cascade) memory.best_cascade = cascade;
+      if (turn.boardClear) memory.board_clears += 1;
       var groupSize = finite(turn.groupSize, 0);
-      if (groupSize > save.biggest_group) save.biggest_group = groupSize;
+      if (groupSize > memory.biggest_group) memory.biggest_group = groupSize;
       var score = finite(turn.score, 0);
-      if (score > save.best_turn) save.best_turn = score;
-      persistSave(save);
+      if (score > memory.best_turn) memory.best_turn = score;
       scheduleMeta();
     } catch (e) {}
   }
 
   function recordRound() {
     try {
-      var save = loadSave();
-      save.rounds_played += 1;
-      persistSave(save);
+      if (isDemoMode()) return;
+      if (!memory) hydrate(loadSave());
+      memory.rounds_played += 1;
       scheduleMeta();
     } catch (e) {}
   }
 
   function recordGame(result) {
     try {
-      var save = loadSave();
+      if (isDemoMode()) return;
+      if (!memory) hydrate(loadSave());
       result = result || {};
-      save.games_played += 1;
-      save.total_score += finite(result.total, 0);
+      memory.games_played += 1;
+      memory.total_score += finite(result.total, 0);
       var best = finite(result.best, 0);
-      if (best > save.best_score) save.best_score = best;
-      if (result.humanWin) save.human_wins += 1;
-      persistSave(save);
+      if (best > memory.best_score) memory.best_score = best;
+      if (result.humanWin) memory.human_wins += 1;
       scheduleMeta();
     } catch (e) {}
   }
 
+  function flushMeta() {
+    try {
+      if (isDemoMode()) return null;
+      if (typeof globalThis.metaFlush === 'function') return globalThis.metaFlush();
+    } catch (e) {}
+    return null;
+  }
+
+  function clearScheduledMeta() {
+    memory = null;
+    if (typeof globalThis.metaCancelPending === 'function') globalThis.metaCancelPending();
+  }
+
   function bootProgress() {
     try {
+      if (isDemoMode()) return;
       metaBackfill(SLUG, APP_VERSION);
-      if (typeof window !== 'undefined' && window.addEventListener) {
+      if (!listening && typeof window !== 'undefined' && window.addEventListener) {
+        listening = true;
         window.addEventListener('pagehide', flushMeta);
       }
     } catch (e) {}
@@ -231,10 +237,9 @@
     APP_VERSION: APP_VERSION,
     SLUG: SLUG,
     SAVE_KEY: SAVE_KEY,
-    STAT_KEYS: STAT_KEYS,
+    STATS: STATS,
     ACHIEVEMENTS: ACHIEVEMENTS,
     loadSave: loadSave,
-    persistSave: persistSave,
     statsFromSave: statsFromSave,
     logrosFromStats: logrosFromStats,
     metaBackfill: metaBackfill,
