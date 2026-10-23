@@ -177,7 +177,7 @@ test('helper keeps at most 20 declared stats and drops undeclared keys', () => {
   const stats = { extra_stat: 99, also_extra: 1 };
   for (let i = 0; i < 21; i++) {
     const key = 'stat_' + String(i).padStart(2, '0');
-    declared.push({ key: key, monotonic: false });
+    declared.push({ key: key, tipo: 'valor_actual' });
     stats[key] = i + 1;
   }
   const record = meta.metaUpdate('clickomania-party', progress.APP_VERSION, {
@@ -196,8 +196,8 @@ test('helper keeps at most 20 declared stats and drops undeclared keys', () => {
 test('monotonic stats never decrease and omitted keys stay', () => {
   install({});
   const declared = [
-    { key: 'games_played', monotonic: true },
-    { key: 'level', monotonic: false }
+    { key: 'games_played', tipo: 'total_acumulado' },
+    { key: 'level', tipo: 'valor_actual' }
   ];
   const OriginalDate = Date;
   let now = 1_700_000_000_000;
@@ -497,7 +497,7 @@ test('metaUpdate posts to the parent frame and never throws', () => {
 test('version strings in the page match APP_VERSION', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
-  assert.equal(progress.APP_VERSION, '1.0.5');
+  assert.equal(progress.APP_VERSION, '1.0.6');
   assert.equal(/^v/i.test(progress.APP_VERSION), false);
   assert.equal(pkg.version, progress.APP_VERSION);
   const queries = html.match(/\?v=([0-9.]+)/g);
@@ -508,5 +508,5 @@ test('version strings in the page match APP_VERSION', () => {
   assert.match(html, /recordRound\(/);
   assert.match(html, /recordGame\(/);
   assert.match(html, /bootProgress\(/);
-  assert.equal(progress.STATS.length <= 20, true);
+  assert.equal(Object.keys(progress.STATS).length <= 20, true);
 });

@@ -1,8 +1,8 @@
 {
   "name": "clickomania-party",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "private": true,
   "scripts": {
-    "test": "node --test test/meta-migrate.test.js test/meta-proyecto.test.js"
+    "test": "node --test test/meta-migrate.test.js test/meta-proyecto.test.js test/meta-tipos.test.js"
   }
 }

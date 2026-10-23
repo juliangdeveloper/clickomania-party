@@ -1,33 +1,36 @@
 (function (root, factory) {
-  var api = factory();
+  var api = factory(typeof module === 'object' && module.exports ? require('./meta.js') : root);
   if (typeof module === 'object' && module.exports) module.exports = api;
   var keys = Object.keys(api);
   for (var i = 0; i < keys.length; i++) root[keys[i]] = api[keys[i]];
-})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (Meta) {
   'use strict';
 
-  var APP_VERSION = '1.0.5';
+  var APP_VERSION = '1.0.6';
   var SLUG = 'clickomania-party';
   var SAVE_KEY = 'clickomania-party.save';
 
-  var STATS = [
-    { key: 'games_played', monotonic: true },
-    { key: 'rounds_played', monotonic: true },
-    { key: 'turns_played', monotonic: true },
-    { key: 'human_turns', monotonic: true },
-    { key: 'ai_turns', monotonic: true },
-    { key: 'groups_popped', monotonic: true },
-    { key: 'cascade_groups', monotonic: true },
-    { key: 'tiles_cleared', monotonic: true },
-    { key: 'cascade_steps', monotonic: true },
-    { key: 'best_cascade', monotonic: true },
-    { key: 'board_clears', monotonic: true },
-    { key: 'biggest_group', monotonic: true },
-    { key: 'best_turn', monotonic: true },
-    { key: 'best_score', monotonic: true },
-    { key: 'total_score', monotonic: true },
-    { key: 'human_wins', monotonic: true }
-  ];
+  var TIPO_STAT = Meta.TIPO_STAT;
+
+  var STATS = Object.freeze({
+    games_played: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'partidas jugadas' },
+    rounds_played: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'rondas jugadas' },
+    turns_played: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'turnos jugados' },
+    human_turns: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'turnos de jugadores humanos' },
+    ai_turns: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'turnos de la IA' },
+    groups_popped: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'grupos de fichas reventados' },
+    cascade_groups: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'grupos reventados en cascada' },
+    tiles_cleared: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'fichas retiradas' },
+    cascade_steps: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'pasos de cascada' },
+    best_cascade: { tipo: TIPO_STAT.MEJOR_MARCA, unidad: 'pasos de cascada en un turno' },
+    board_clears: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'tableros vaciados' },
+    biggest_group: { tipo: TIPO_STAT.MEJOR_MARCA, unidad: 'fichas en un solo grupo' },
+    best_turn: { tipo: TIPO_STAT.MEJOR_MARCA, unidad: 'puntos en un turno' },
+    best_score: { tipo: TIPO_STAT.MEJOR_MARCA, unidad: 'puntos en una partida' },
+    total_score: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'puntos' },
+    human_wins: { tipo: TIPO_STAT.TOTAL_ACUMULADO, unidad: 'partidas ganadas por un humano' }
+  });
+  var STAT_KEYS = Object.keys(STATS);
 
   var ACHIEVEMENTS = [
     { id: 'first_game', met: function (s) { return s.games_played >= 1; } },
@@ -84,7 +87,7 @@
 
   function emptyStats() {
     var stats = {};
-    for (var i = 0; i < STATS.length; i++) stats[STATS[i].key] = 0;
+    for (var i = 0; i < STAT_KEYS.length; i++) stats[STAT_KEYS[i]] = 0;
     return stats;
   }
 
@@ -101,8 +104,8 @@
       if (!data || typeof data !== 'object' || Array.isArray(data)) return save;
       var keys = Object.keys(data);
       for (var i = 0; i < keys.length; i++) save[keys[i]] = data[keys[i]];
-      for (var s = 0; s < STATS.length; s++) {
-        var statKey = STATS[s].key;
+      for (var s = 0; s < STAT_KEYS.length; s++) {
+        var statKey = STAT_KEYS[s];
         if (typeof save[statKey] !== 'number' || !Number.isFinite(save[statKey])) save[statKey] = 0;
       }
       return save;
@@ -113,8 +116,8 @@
 
   function statsFromSave(save) {
     var stats = {};
-    for (var i = 0; i < STATS.length; i++) {
-      var key = STATS[i].key;
+    for (var i = 0; i < STAT_KEYS.length; i++) {
+      var key = STAT_KEYS[i];
       var value = save ? save[key] : 0;
       stats[key] = typeof value === 'number' && Number.isFinite(value) ? value : 0;
     }
