@@ -198,7 +198,6 @@
   function metaFlush() {
     try {
       if (!pending || isDemoMode()) return null;
-      if (lastWriteAt && Date.now() - lastWriteAt < 1000) return null;
       if (timer) {
         clearTimeout(timer);
         timer = null;

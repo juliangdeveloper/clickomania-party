@@ -252,7 +252,7 @@ test('monotonic stats never decrease and omitted keys stay', () => {
   }
 });
 
-test('meta writes at most once per second, including backfill and flush', () => {
+test('normal writes stay at one per second, including backfill', () => {
   const rawSave = JSON.stringify(oldSave);
   const store = install({
     [progress.SAVE_KEY]: rawSave,
@@ -262,13 +262,10 @@ test('meta writes at most once per second, including backfill and flush', () => 
   let now = 50_000;
   const originalNow = Date.now;
   Date.now = () => now;
-  const messages = [];
-  globalThis.window = { parent: { postMessage(data, origin) { messages.push({ data, origin }); } } };
   globalThis.location = { origin: 'https://play.test', search: '' };
   try {
-    progress.bootProgress();
+    progress.metaBackfill(progress.SLUG, progress.APP_VERSION);
     assert.equal(writes(), 1);
-    assert.equal(messages.length, 1);
     progress.recordTurn({
       human: true,
       groups: 1,
@@ -279,28 +276,94 @@ test('meta writes at most once per second, including backfill and flush', () => 
       score: 9
     });
     progress.recordGame({ best: 600, total: 600, humanWin: true });
-    assert.equal(progress.flushMeta(), null);
+    now += 999;
     assert.equal(writes(), 1);
     assert.equal(JSON.parse(store.getItem(META_KEY)).stats.turns_played, 40);
-    now += 999;
-    assert.equal(progress.flushMeta(), null);
-    assert.equal(writes(), 1);
-    now += 1;
-    const flushed = progress.flushMeta();
-    assert.equal(writes(), 2);
-    assert.equal(messages.length, 2);
-    assert.equal(flushed.stats.turns_played, 41);
-    assert.equal(flushed.stats.games_played, 3);
-    assert.equal(flushed.stats.human_wins, 2);
-    assert.equal(flushed.logros.includes('score_500'), true);
     assert.equal(store.getItem(progress.SAVE_KEY), rawSave);
     assert.equal(store.getItem('unrelated.key'), 'stay');
+  } finally {
+    Date.now = originalNow;
+    delete globalThis.location;
+    meta.metaCancelPending();
+    progress.clearScheduledMeta();
+  }
+});
+
+test('pagehide and hidden visibility flush a pending change immediately', () => {
+  const rawSave = JSON.stringify(oldSave);
+  const store = install({
+    [progress.SAVE_KEY]: rawSave,
+    'unrelated.key': 'stay'
+  });
+  const writes = metaWrites(store);
+  let now = 60_000;
+  const originalNow = Date.now;
+  Date.now = () => now;
+  const messages = [];
+  const handlers = {};
+  function listen(type, fn) { handlers[type] = fn; }
+  globalThis.window = {
+    parent: { postMessage(data, origin) { messages.push({ data, origin }); } },
+    addEventListener: listen,
+    removeEventListener() {}
+  };
+  globalThis.document = {
+    visibilityState: 'visible',
+    addEventListener: listen,
+    removeEventListener() {}
+  };
+  globalThis.location = { origin: 'https://play.test', search: '' };
+  try {
+    progress.bootProgress();
+    assert.equal(writes(), 1);
+    assert.equal(messages.length, 1);
+    handlers.pagehide();
+    globalThis.document.visibilityState = 'hidden';
+    handlers.visibilitychange();
+    assert.equal(writes(), 1);
+    assert.equal(messages.length, 1);
+
+    progress.recordTurn({
+      human: true,
+      groups: 1,
+      tiles: 4,
+      cascadeSteps: 1,
+      cascade: 2,
+      groupSize: 4,
+      score: 9
+    });
+    assert.equal(writes(), 1);
+    handlers.pagehide();
+    assert.equal(writes(), 2);
+    assert.equal(messages.length, 2);
+    assert.equal(JSON.parse(store.getItem(META_KEY)).stats.turns_played, 41);
     assert.equal(messages[1].data.type, 'meta');
     assert.equal(messages[1].data.key, META_KEY);
     assert.equal(messages[1].origin, 'https://play.test');
+    handlers.pagehide();
+    assert.equal(writes(), 2);
+
+    progress.recordGame({ best: 600, total: 600, humanWin: true });
+    assert.equal(writes(), 2);
+    globalThis.document.visibilityState = 'visible';
+    handlers.visibilitychange();
+    assert.equal(writes(), 2);
+    globalThis.document.visibilityState = 'hidden';
+    handlers.visibilitychange();
+    assert.equal(writes(), 3);
+    assert.equal(messages.length, 3);
+    const flushed = JSON.parse(store.getItem(META_KEY));
+    assert.equal(flushed.stats.turns_played, 41);
+    assert.equal(flushed.stats.games_played, 3);
+    assert.equal(flushed.stats.human_wins, 2);
+    handlers.visibilitychange();
+    assert.equal(writes(), 3);
+    assert.equal(store.getItem(progress.SAVE_KEY), rawSave);
+    assert.equal(store.getItem('unrelated.key'), 'stay');
   } finally {
     Date.now = originalNow;
     delete globalThis.window;
+    delete globalThis.document;
     delete globalThis.location;
     meta.metaCancelPending();
     progress.clearScheduledMeta();
@@ -434,7 +497,7 @@ test('metaUpdate posts to the parent frame and never throws', () => {
 test('version strings in the page match APP_VERSION', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
-  assert.equal(progress.APP_VERSION, '1.0.1');
+  assert.equal(progress.APP_VERSION, '1.0.2');
   assert.equal(/^v/i.test(progress.APP_VERSION), false);
   assert.equal(pkg.version, progress.APP_VERSION);
   const queries = html.match(/\?v=([0-9.]+)/g);

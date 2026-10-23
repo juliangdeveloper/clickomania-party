@@ -7,7 +7,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var APP_VERSION = '1.0.1';
+  var APP_VERSION = '1.0.2';
   var SLUG = 'clickomania-party';
   var SAVE_KEY = 'clickomania-party.save';
 
@@ -48,7 +48,32 @@
   ];
 
   var memory = null;
-  var listening = false;
+
+  function onPageHide() {
+    flushMeta();
+  }
+
+  function onVisibilityChange() {
+    try {
+      var doc = typeof document !== 'undefined' ? document : globalThis.document;
+      if (doc && doc.visibilityState === 'hidden') flushMeta();
+    } catch (e) {}
+  }
+
+  function bindHideFlush() {
+    try {
+      var view = typeof window !== 'undefined' ? window : globalThis.window;
+      if (view && view.addEventListener) {
+        if (view.removeEventListener) view.removeEventListener('pagehide', onPageHide);
+        view.addEventListener('pagehide', onPageHide);
+      }
+      var doc = typeof document !== 'undefined' ? document : globalThis.document;
+      if (doc && doc.addEventListener) {
+        if (doc.removeEventListener) doc.removeEventListener('visibilitychange', onVisibilityChange);
+        doc.addEventListener('visibilitychange', onVisibilityChange);
+      }
+    } catch (e) {}
+  }
 
   function isDemoMode() {
     try {
@@ -226,10 +251,7 @@
     try {
       if (isDemoMode()) return;
       metaBackfill(SLUG, APP_VERSION);
-      if (!listening && typeof window !== 'undefined' && window.addEventListener) {
-        listening = true;
-        window.addEventListener('pagehide', flushMeta);
-      }
+      bindHideFlush();
     } catch (e) {}
   }
 
