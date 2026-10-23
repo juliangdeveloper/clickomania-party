@@ -145,6 +145,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <div class="overlay" id="rulesOv"><div class="overlay-card" id="rulesCard"></div></div>
 <div class="overlay" id="aboutOv"><div class="overlay-card" id="aboutCard"></div></div>
 
+<script src="meta.js?v=1.0.0"></script>
+<script src="progress.js?v=1.0.0"></script>
 <script>
 const PALETTE=['#e74c3c','#3498db','#2ecc71','#f1c40f','#9b59b6'];
 const PCOL=['#2dd4bf','#f97316','#ec4899','#84cc16'];
@@ -175,6 +177,7 @@ function startG(){
 }
 
 function nextRound(){
+  if(G.round>=1&&typeof recordRound==='function')recordRound();
   G.round++;
   if(G.round>G.maxRounds){endGame();return}
   generateBoard();
@@ -298,6 +301,9 @@ async function processTurn(r,c){
 
   let turnScore=0;
   let cascadeLevel=1;
+  let tilesCleared=group.length;
+  let cascadeGroupCount=0;
+  let biggestGroup=group.length;
 
   // Snapshot each cell's ORIGINAL COLUMN before any changes
   const trackGrid=Array.from({length:G.rows},()=>Array(G.effectiveCols).fill(-1));
@@ -328,6 +334,9 @@ async function processTurn(r,c){
 
     let cascadeScore=0;
     for(const g of cascadeGroups){
+      tilesCleared+=g.length;
+      cascadeGroupCount++;
+      if(g.length>biggestGroup)biggestGroup=g.length;
       popCells(g);
       await sleep(200);
       g.forEach(([gr,gc])=>{G.grid[gr][gc]=0;trackGrid[gr][gc]=-1});
@@ -349,6 +358,17 @@ async function processTurn(r,c){
   const p=G.players[G.curP];
   p.score+=turnScore;
   if(turnScore>p.maxTurn)p.maxTurn=turnScore;
+  if(typeof recordTurn==='function')recordTurn({
+    human:p.type==='human',
+    groups:1,
+    cascadeGroups:cascadeGroupCount,
+    tiles:tilesCleared,
+    cascadeSteps:Math.max(0,cascadeLevel-1),
+    cascade:cascadeLevel,
+    boardClear:isClear,
+    groupSize:biggestGroup,
+    score:turnScore
+  });
 
   G.animating=false;
   renderAll();
@@ -598,6 +618,11 @@ function cellClick(r,c){
 function endGame(){
   G.over=true;showS('end');
   const sorted=[...G.players].sort((a,b)=>b.score!==a.score?b.score-a.score:b.clears-a.clears);
+  if(typeof recordGame==='function')recordGame({
+    best:sorted.length?sorted[0].score:0,
+    total:G.players.reduce((sum,pl)=>sum+pl.score,0),
+    humanWin:!!(sorted.length&&sorted[0].type==='human')
+  });
   const medals=['🥇','🥈','🥉','4️⃣'];
   document.getElementById('endRank').innerHTML=sorted.map((p,i)=>`<div class="end-rank ${i===0?'w':''}"><span class="er-pos">${medals[i]}</span><span class="er-name" style="color:${p.color}">${p.name}</span><span class="er-score">${p.score} pts</span><div style="font-size:.7em;color:var(--dim)">Clears:${p.clears} Mejor turno:${p.maxTurn}</div></div>`).join('');
 }
@@ -673,6 +698,7 @@ function showS(id){document.querySelectorAll('.screen').forEach(s=>s.classList.r
 function setMsg(m){document.getElementById('msg').textContent=m}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 renderPS(2);
+if(typeof bootProgress==='function')bootProgress();
 </script>
 </body>
 </html>
