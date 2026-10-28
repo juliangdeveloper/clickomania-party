@@ -138,8 +138,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <div class="overlay" id="rulesOv"><div class="overlay-card" id="rulesCard"></div></div>
 <div class="overlay" id="aboutOv"><div class="overlay-card" id="aboutCard"></div></div>
 
-<script src="meta.js?v=1.0.8"></script>
-<script src="progress.js?v=1.0.8"></script>
+<script src="meta.js?v=1.0.9"></script>
+<script src="progress.js?v=1.0.9"></script>
 <script>
 const PALETTE=['#e74c3c','#3498db','#2ecc71','#f1c40f','#9b59b6'];
 const PCOL=['#2dd4bf','#f97316','#ec4899','#84cc16'];
@@ -221,32 +221,6 @@ function findAllGroups(minSize){
     }
   }
   return groups;
-}
-
-function applyGravity(){
-  for(let c=0;c<G.effectiveCols;c++){
-    const tiles=[];
-    for(let r=G.rows-1;r>=0;r--){if(G.grid[r][c])tiles.push(G.grid[r][c])}
-    for(let r=0;r<G.rows;r++)G.grid[r][c]=0;
-    for(let i=0;i<tiles.length;i++)G.grid[G.rows-1-i][c]=tiles[i];
-  }
-}
-
-function collapseColumns(){
-  const active=[];
-  for(let c=0;c<G.effectiveCols;c++){
-    let empty=true;
-    for(let r=0;r<G.rows;r++){if(G.grid[r][c]){empty=false;break}}
-    if(!empty)active.push(c);
-  }
-  const newGrid=[];
-  for(let r=0;r<G.rows;r++){
-    newGrid[r]=[];
-    for(let nc=0;nc<active.length;nc++)newGrid[r][nc]=G.grid[r][active[nc]];
-    for(let nc=active.length;nc<G.effectiveCols;nc++)newGrid[r][nc]=0;
-  }
-  G.grid=newGrid;
-  G.effectiveCols=active.length;
 }
 
 function applyGravityTracked(trackGrid){
