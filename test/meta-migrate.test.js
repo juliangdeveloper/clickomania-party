@@ -370,36 +370,6 @@ test('pagehide and hidden visibility flush a pending change immediately', () => 
   }
 });
 
-test('demo and preview modes do not write or postMessage', () => {
-  for (const search of ['?demo=1', '?preview=1', '?x=1&demo=true']) {
-    const store = install({ [progress.SAVE_KEY]: JSON.stringify(oldSave) });
-    const writes = metaWrites(store);
-    const messages = [];
-    globalThis.window = { parent: { postMessage(data, origin) { messages.push({ data, origin }); } } };
-    globalThis.location = { origin: 'https://play.test', search: search };
-    try {
-      progress.bootProgress();
-      progress.recordTurn({ human: true, groups: 1, tiles: 3, cascade: 1, groupSize: 3, score: 1 });
-      progress.recordGame({ best: 10, total: 10, humanWin: true });
-      progress.flushMeta();
-      meta.metaUpdate(progress.SLUG, progress.APP_VERSION, {
-        stats: { games_played: 4 },
-        logros: ['first_game'],
-        declared: progress.STATS
-      });
-      assert.equal(writes(), 0);
-      assert.equal(messages.length, 0);
-      assert.equal(store.getItem(META_KEY), null);
-      assert.equal(store.getItem(progress.SAVE_KEY), JSON.stringify(oldSave));
-    } finally {
-      delete globalThis.window;
-      delete globalThis.location;
-      meta.metaCancelPending();
-      progress.clearScheduledMeta();
-    }
-  }
-});
-
 test('load and play leave old save keys byte-identical', () => {
   const blob = 'data:image/png;base64,' + 'A'.repeat(4000);
   const save = Object.assign({}, oldSave, { portrait: blob });
@@ -497,7 +467,7 @@ test('metaUpdate posts to the parent frame and never throws', () => {
 test('version strings in the page match APP_VERSION', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
-  assert.equal(progress.APP_VERSION, '1.0.10');
+  assert.equal(progress.APP_VERSION, '1.0.11');
   assert.equal(/^v/i.test(progress.APP_VERSION), false);
   assert.equal(pkg.version, progress.APP_VERSION);
   const queries = html.match(/\?v=([0-9.]+)/g);

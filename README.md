@@ -19,6 +19,7 @@ Clickomania es NP-completo: [Biedl, Demaine, Demaine, Fleischer, Jacobsen y Munr
 
 ## Stack
 Un solo `index.html` con HTML, CSS y JavaScript vanilla. Sin dependencias ni servidor.
+Al abrirse guarda el progreso en `localStorage` (`meta.v1.clickomania-party`), que lee el [portafolio](https://juliangdeveloper.github.io/).
 
 ## Otros juegos de fiesta
 - 🌊 [Flood-It Party](https://github.com/juliangdeveloper/floodit-party) · [jugar](https://juliangdeveloper.github.io/floodit-party/)
