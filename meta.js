@@ -23,14 +23,9 @@
     fases_completadas: 2,
     tipo: TIPO_PROYECTO.PROYECTO,
     aportes: [
-      { id: 'programacion', aporte: 2, fuente: 'creacion' },
-      { id: 'juegos', aporte: 2, fuente: 'creacion' },
-      { id: 'algoritmos', aporte: 2, fuente: 'creacion' },
-      { id: 'matematicas', aporte: 1, fuente: 'creacion' },
-      { id: 'logica', aporte: 2, fuente: 'uso' },
-      { id: 'atencion', aporte: 2, fuente: 'uso' },
-      { id: 'estrategia', aporte: 1, fuente: 'uso' },
-      { id: 'perseverancia', aporte: 1, fuente: 'uso' }
+      { stat: 'Programación', exp: 6, fuente: 'creacion' },
+      { stat: 'Diseño', exp: 6, fuente: 'creacion' },
+      { stat: 'Planificación', exp: 20, fuente: 'uso' }
     ]
   };
 
@@ -54,25 +49,27 @@
     return Object.keys(stats).map(function (key) { return { key: key, tipo: stats[key] && stats[key].tipo }; });
   }
 
+  var APORTE_STAT_MAX = 32;
+  var APORTE_EXP_MAX = 99;
+
   function aportesValidos(lista) {
     if (!Array.isArray(lista)) return null;
     var out = [];
     var seen = {};
-    var i;
-    for (i = 0; i < lista.length; i++) {
+    for (var i = 0; i < lista.length; i++) {
       var it = lista[i];
       if (!it || typeof it !== 'object' || Array.isArray(it)) return null;
-      var id = it.id;
+      var stat = it.stat;
+      var exp = it.exp;
       var fuente = it.fuente;
-      var aporte = it.aporte;
-      if (typeof id !== 'string' || !/^[a-z][a-z0-9]*$/.test(id)) return null;
+      if (typeof stat !== 'string' || !stat.trim() || stat !== stat.trim() || Array.from(stat).length > APORTE_STAT_MAX) return null;
       if (fuente !== 'creacion' && fuente !== 'uso') return null;
-      if (!proyectoInt(aporte, 1, 3)) return null;
-      var key = id + '\n' + fuente;
+      if (!(proyectoInt(exp, 1, APORTE_EXP_MAX))) return null;
+      var key = stat + '\n' + fuente;
       if (seen[key]) return null;
       if (Object.keys(it).length !== 3) return null;
       seen[key] = true;
-      out.push({ id: id, aporte: aporte, fuente: fuente });
+      out.push({ stat: stat, exp: exp, fuente: fuente });
     }
     return out;
   }
@@ -102,6 +99,36 @@
     proyectoSource = p === null ? PROYECTO : p;
   }
 
+  function metaDeclararProyecto(slug, version) {
+    try {
+      var store = globalThis.localStorage;
+      if (!store || !slug) return null;
+      var clave = 'meta.v1.' + slug;
+      var raw = store.getItem(clave);
+      var base = null;
+      if (raw != null && raw !== '') {
+        try {
+          var previo = JSON.parse(raw);
+          if (previo && typeof previo === 'object' && !Array.isArray(previo) && previo.v === 1 && previo.slug === slug) base = previo;
+        } catch (e) {
+          base = null;
+        }
+        if (!base) store.setItem(clave + '.corrupt', String(raw));
+      }
+      if (!base) base = { v: 1, slug: slug, version: String(version == null ? '' : version).replace(/^[vV]/, ''), updatedAt: new Date().toISOString(), stats: {}, logros: [], hitos: {} };
+      var p = metaProyecto(proyectoSource);
+      if (p) base.proyecto = p;
+      var texto = JSON.stringify(base);
+      if (texto !== raw) {
+        store.setItem(clave, texto);
+        if (typeof window !== 'undefined' && window.parent && window.parent !== window) window.parent.postMessage({ type: 'meta', key: clave, data: base }, location.origin);
+      }
+      return base;
+    } catch (e) {
+      return null;
+    }
+  }
+
   function withProyecto(record) {
     var p = metaProyecto(proyectoSource);
     if (p) record.proyecto = p;
@@ -114,16 +141,6 @@
 
   function isFiniteNumber(value) {
     return typeof value === 'number' && Number.isFinite(value);
-  }
-
-  function isDemoMode() {
-    try {
-      var loc = typeof location !== 'undefined' ? location : globalThis.location;
-      var search = loc && loc.search ? String(loc.search) : '';
-      return /(?:^|[?&])(?:demo|preview)=(?:1|true|yes)(?:&|$)/.test(search);
-    } catch (e) {
-      return false;
-    }
   }
 
   function isValidRecord(parsed, slug) {
@@ -254,7 +271,7 @@
     if (timer) return;
     timer = setTimeout(function () {
       timer = null;
-      if (!pending || isDemoMode()) {
+      if (!pending) {
         pending = null;
         return;
       }
@@ -273,7 +290,6 @@
 
   function metaUpdate(slug, version, patch) {
     try {
-      if (isDemoMode()) return null;
       patch = patch || {};
       var nowMs = Date.now();
       if (lastWriteAt && nowMs - lastWriteAt < 1000) {
@@ -294,7 +310,7 @@
 
   function metaFlush() {
     try {
-      if (!pending || isDemoMode()) return null;
+      if (!pending) return null;
       if (timer) {
         clearTimeout(timer);
         timer = null;
@@ -320,6 +336,7 @@
     metaCancelPending: metaCancelPending,
     metaProyecto: metaProyecto,
     metaSetProyecto: metaSetProyecto,
+    metaDeclararProyecto: metaDeclararProyecto,
     PROYECTO: PROYECTO,
     FASE: FASE,
     ESTADO_FASE: ESTADO_FASE,

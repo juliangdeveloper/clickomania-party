@@ -6,7 +6,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (Meta) {
   'use strict';
 
-  var APP_VERSION = '1.0.10';
+  var APP_VERSION = '1.0.11';
   var SLUG = 'clickomania-party';
   var SAVE_KEY = 'clickomania-party.save';
 
@@ -75,16 +75,6 @@
     } catch (e) {}
   }
 
-  function isDemoMode() {
-    try {
-      var loc = typeof location !== 'undefined' ? location : globalThis.location;
-      var search = loc && loc.search ? String(loc.search) : '';
-      return /(?:^|[?&])(?:demo|preview)=(?:1|true|yes)(?:&|$)/.test(search);
-    } catch (e) {
-      return false;
-    }
-  }
-
   function emptyStats() {
     var stats = {};
     for (var i = 0; i < STAT_KEYS.length; i++) stats[STAT_KEYS[i]] = 0;
@@ -144,7 +134,7 @@
 
   function scheduleMeta() {
     try {
-      if (isDemoMode() || !memory || typeof globalThis.metaUpdate !== 'function') return null;
+      if (!memory || typeof globalThis.metaUpdate !== 'function') return null;
       return globalThis.metaUpdate(SLUG, APP_VERSION, {
         stats: memory,
         logros: logrosFromStats(memory),
@@ -157,7 +147,6 @@
 
   function metaBackfill(slug, version) {
     try {
-      if (isDemoMode()) return null;
       var key = 'meta.v1.' + slug;
       var raw = globalThis.localStorage.getItem(key);
       if (raw != null) {
@@ -190,7 +179,6 @@
 
   function recordTurn(turn) {
     try {
-      if (isDemoMode()) return;
       if (!memory) hydrate(loadSave());
       turn = turn || {};
       memory.turns_played += 1;
@@ -213,7 +201,6 @@
 
   function recordRound() {
     try {
-      if (isDemoMode()) return;
       if (!memory) hydrate(loadSave());
       memory.rounds_played += 1;
       scheduleMeta();
@@ -222,7 +209,6 @@
 
   function recordGame(result) {
     try {
-      if (isDemoMode()) return;
       if (!memory) hydrate(loadSave());
       result = result || {};
       memory.games_played += 1;
@@ -236,7 +222,6 @@
 
   function flushMeta() {
     try {
-      if (isDemoMode()) return null;
       if (typeof globalThis.metaFlush === 'function') return globalThis.metaFlush();
     } catch (e) {}
     return null;
@@ -249,7 +234,6 @@
 
   function bootProgress() {
     try {
-      if (isDemoMode()) return;
       metaBackfill(SLUG, APP_VERSION);
       bindHideFlush();
     } catch (e) {}
